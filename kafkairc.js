@@ -1,5 +1,4 @@
 var util = require('util');
-var amqp = require('amqplib/callback_api');
 var tools = require('./client-tools.js');
 
 process.stdin.resume();
@@ -28,31 +27,13 @@ process.stdin.on('data', function (_text) {
 			console.log('Sending join request, please wait ...');
 			var param = command.substring(5, command.length).trim();
 			
-			req.request = 'join';
-			req.command = param;
-			
-			tools.queryServer(req, function(result){
-				if (result == "1"){
-					console.log("You are now member of #" + param);
-				}else{
-					console.log("You already a member of #" + param);
-				}
-			});
+			tools.subscribe(param);
 			
 		}else if (command.substring(0, 6) == '/leave'){
 			console.log('Sending leave request, please wait ...');
 			var param = command.substring(6, command.length).trim();
 			
-			req.request = 'leave';
-			req.command = param;
-			
-			tools.queryServer(req, function(result){
-				if (result == "1"){
-					console.log("Leaving #" + param);
-				}else{
-					console.log("You are not a member of #" + param);
-				}
-			});
+			tools.unsubscribe(param);
 			
 		}else if (command.substring(0, 1) == '@'){
 			var msg_format = /@(\w+) ([\w\W]+)/;

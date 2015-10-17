@@ -1,36 +1,65 @@
-var amqp = require('amqplib/callback_api');
+var kafka = require('kafka-node');
+
+var c_sender = new kafka.Client();
+var c_receiver = new kafka.Client();
+var c_offset = new kafka.Client();
+
+var producer = new kafka.Producer(c_sender);
+var consumer = new kafka.Consumer(c_receiver, [], {autoCommit: false, fromOffset: true});
+var offset = new kafka.Offset(c_offset);
 
 module.exports = {
-	serverAddress : '167.205.32.46',
-	queueIdentifier : '13512028_',
-	serverIdentifier : '13512028_server_',
 	nick : '',
 	messages : [],
-	
-	genToken : function(){
-		return Math.random().toString() + Math.random().toString() + Math.random().toString();
-	},
+	subscriptions : [],
 	
 	reg : function (nick){
-		var _acc = this;
-		var req = {};
-		req.request = 'nick';
-		req.command = nick;
-		
-		this.queryServer(req, function(result){
-			if (result == "1"){
-				console.log("Nick Changed to " + nick);
-				_acc.nick = nick;
-				
-				_acc.listen();
-			}else{
-				console.log("Nick is used by another person! Please select another!");
-			}
+		this.nick = nick;
+		var messages = this.messages;
+		consumer.on('message', function (message) {
+			messages.push('[' + message.topic + '] \t' + message.value);
 		});
+		console.log("Nick changed to " + nick);
+	},
+	
+	subscribe : function (channel){
+		var subscriptions = this.subscriptions;
+		
+		if (subscriptions.indexOf(channel) != -1){
+			console.log("You are already a member of " + channel);
+			return;
+		}
+		
+		producer.createTopics([channel], false, function (err, data) {
+			offset.fetch([{ topic: channel, partition: 0, time: -1, maxNum: 1 }], function (err, data) {
+				consumer.addTopics([{ topic: channel, offset: data[channel]['0'][0]}], function (err, added) {
+					console.log("You have been subscribed to " + channel);
+					subscriptions.push(channel);
+				}, true);
+			});
+			
+		});
+
+	},
+	
+	unsubscribe : function (channel){
+		var subscriptions = this.subscriptions;
+		
+		if (subscriptions.indexOf(channel) == -1){
+			console.log("You are not a member of " + channel);
+			return;
+		}
+		
+		consumer.removeTopics([channel], function (err, removed) {
+			console.log("You have been unsubscribed to " + channel);
+			subscriptions.splice(subscriptions.indexOf(channel), 1);
+		}, true);
+		
+
 	},
 	
 	queryServer : function (query, callback){
-		var serverIdentifier = this.serverIdentifier;
+		/*var serverIdentifier = this.serverIdentifier;
 		var token = this.genToken();
 		
 		query.nick = this.nick;
@@ -50,24 +79,7 @@ module.exports = {
 					ch.sendToQueue(serverIdentifier, new Buffer(query_string), { correlationId: corr, replyTo: q.queue });
 				});
 			});
-		});
-	},
-	
-	listen : function(){
-		var nick = this.nick;
-		var queueIdentifier = this.queueIdentifier;
-		var messages = this.messages;
-		
-		amqp.connect('amqp://' + this.serverAddress, function(err, conn) {
-			conn.createChannel(function(err, ch) {
-				var q = queueIdentifier + nick;
-
-				ch.assertQueue(q, {durable: false});
-				ch.consume(q, function(msg) {
-					messages.push(msg.content.toString());
-				}, {noAck: true});
-			});
-		});
+		});*/
 	}
 	
 };

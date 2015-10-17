@@ -55,31 +55,24 @@ module.exports = {
 			subscriptions.splice(subscriptions.indexOf(channel), 1);
 		}, true);
 		
-
 	},
 	
-	queryServer : function (query, callback){
-		/*var serverIdentifier = this.serverIdentifier;
-		var token = this.genToken();
-		
-		query.nick = this.nick;
-		amqp.connect('amqp://' + this.serverAddress, function(err, conn) {
-			conn.createChannel(function(err, ch) {
-				ch.assertQueue('', {exclusive: true}, function(err, q) {
-					var corr = token;
-
-					ch.consume(q.queue, function(msg) {
-						if (msg.properties.correlationId == corr) {
-							callback(msg.content.toString());
-							setTimeout(function() { conn.close() }, 500);
-						}
-					}, {noAck: true});
-					
-					var query_string = JSON.stringify(query);
-					ch.sendToQueue(serverIdentifier, new Buffer(query_string), { correlationId: corr, replyTo: q.queue });
-				});
+	sendto : function(channel, message){
+		msg = this.nick + " : " + message;
+		data_to_send = [{ topic: channel, messages: msg, partition: 0 }];
+		producer.send(data_to_send, function (err, data) {
+			console.log("Message sent to " + channel + "!");
+		});
+	},
+	
+	sendall : function(message){
+		msg = this.nick + " : " + message;
+		this.subscriptions.forEach(function (ch){
+			data_to_send = [{ topic: ch, messages: msg, partition: 0 }];
+			producer.send(data_to_send, function (err, data) {
+				console.log("Message sent to " + ch + "!");
 			});
-		});*/
+		});
 	}
 	
 };
